@@ -59,7 +59,10 @@ export default function AdminDashboard() {
   );
 
   // Calculate statistics
-  const totalRevenue = bills.reduce((sum, bill) => sum + (bill.paid_amount || 0), 0);
+  const totalRevenue = bills.reduce((sum, bill) => {
+    const amount = Number(bill.paid_amount) || 0;
+    return sum + amount;
+  }, 0);
   const pendingBills = bills.filter(bill => bill.status === 'pending' || bill.status === 'partial');
   const lowStockItems = inventory.filter(item => item.quantity <= item.min_stock);
   const todayAppointments = appointments.filter(apt => apt.date === new Date().toISOString().split('T')[0]);

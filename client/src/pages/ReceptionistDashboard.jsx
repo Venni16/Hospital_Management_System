@@ -88,10 +88,20 @@ export default function ReceptionistDashboard() {
 
   const todayAppointments = appointments.filter(apt => apt.date === new Date().toISOString().split('T')[0]);
   const pendingBills = bills.filter(bill => bill.status === 'pending' || bill.status === 'partial');
-  const totalRevenue = bills.reduce((sum, bill) => sum + (bill.paid_amount || 0), 0);
-  const todayRevenue = bills.filter(bill => bill.date === new Date().toISOString().split('T')[0])
-                           .reduce((sum, bill) => sum + (bill.paid_amount || 0), 0);
+  // Helper function to safely sum monetary values
+const safeSum = (items, field) => {
+  return items.reduce((total, item) => {
+    const value = parseFloat(item[field]);
+    return total + (isNaN(value) ? 0 : value);
+  }, 0);
+};
 
+// Calculate revenues
+const totalRevenue = safeSum(bills, 'paid_amount');
+const todayRevenue = safeSum(
+  bills.filter(bill => bill.date === new Date().toISOString().split('T')[0]),
+  'paid_amount'
+);
   // Get available doctors for assignment
   const availableDoctors = staff.filter(member => member.role === 'doctor' && member.status === 'active');
 
