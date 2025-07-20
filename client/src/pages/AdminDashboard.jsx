@@ -4,6 +4,7 @@ import SearchBar from '../components/SearchBar';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
+import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import { 
   Users, Calendar, DollarSign, Package, Plus, Edit3, Trash2, 
   Eye, TrendingUp, Activity, UserPlus, Settings, BarChart3,
@@ -26,6 +27,13 @@ export default function AdminDashboard() {
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [showWardModal, setShowWardModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    itemType: '',
+    itemName: '',
+    itemId: '',
+    onConfirm: null
+  });
 
   // Fetch data on component mount
   useEffect(() => {
@@ -87,14 +95,21 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeletePatient = async (patientId) => {
-    if (window.confirm('Are you sure you want to delete this patient?')) {
-      try {
-        await deletePatient(patientId);
-      } catch (error) {
-        console.error('Error deleting patient:', error);
+  const handleDeletePatient = (patientId, patientName) => {
+    setDeleteModal({
+      isOpen: true,
+      itemType: 'Patient',
+      itemName: patientName,
+      itemId: patientId,
+      onConfirm: async () => {
+        try {
+          await deletePatient(patientId);
+          setDeleteModal({ ...deleteModal, isOpen: false });
+        } catch (error) {
+          console.error('Error deleting patient:', error);
+        }
       }
-    }
+    });
   };
 
   const handleAddStaff = async (staffData) => {
@@ -117,14 +132,21 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeleteStaff = async (staffId) => {
-    if (window.confirm('Are you sure you want to delete this staff member?')) {
-      try {
-        await deleteStaff(staffId);
-      } catch (error) {
-        console.error('Error deleting staff:', error);
+  const handleDeleteStaff = (staffId, staffName) => {
+    setDeleteModal({
+      isOpen: true,
+      itemType: 'Staff Member',
+      itemName: staffName,
+      itemId: staffId,
+      onConfirm: async () => {
+        try {
+          await deleteStaff(staffId);
+          setDeleteModal({ ...deleteModal, isOpen: false });
+        } catch (error) {
+          console.error('Error deleting staff:', error);
+        }
       }
-    }
+    });
   };
 
   const handleAddWard = async (wardData) => {
@@ -147,15 +169,23 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeleteWard = async (wardId) => {
-    if (window.confirm('Are you sure you want to delete this ward?')) {
-      try {
-        await deleteWard(wardId);
-      } catch (error) {
-        console.error('Error deleting ward:', error);
+  const handleDeleteWard = (wardId, wardName) => {
+    setDeleteModal({
+      isOpen: true,
+      itemType: 'Ward',
+      itemName: wardName,
+      itemId: wardId,
+      onConfirm: async () => {
+        try {
+          await deleteWard(wardId);
+          setDeleteModal({ ...deleteModal, isOpen: false });
+        } catch (error) {
+          console.error('Error deleting ward:', error);
+        }
       }
-    }
+    });
   };
+  
 
   const tabs = [
     { id: 'overview', name: 'Overview', icon: Activity },
@@ -451,11 +481,11 @@ export default function AdminDashboard() {
                         <Edit3 className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDeletePatient(patient.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+  onClick={() => handleDeletePatient(patient.id, patient.name)}
+  className="text-red-600 hover:text-red-800"
+>
+  <Trash2 className="h-4 w-4" />
+</button>
                     </div>
                   </div>
                 </li>
@@ -549,11 +579,11 @@ export default function AdminDashboard() {
                         <Edit3 className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteStaff(member.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+  onClick={() => handleDeleteStaff(member.id, `${member.first_name} ${member.last_name}`)}
+  className="text-red-600 hover:text-red-800"
+>
+  <Trash2 className="h-4 w-4" />
+</button>
                     </div>
                   </div>
                 </li>
@@ -607,11 +637,11 @@ export default function AdminDashboard() {
                       <Edit3 className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => handleDeleteWard(ward.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+  onClick={() => handleDeleteWard(ward.id, ward.name)}
+  className="text-red-600 hover:text-red-800"
+>
+  <Trash2 className="h-4 w-4" />
+</button>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -724,6 +754,13 @@ export default function AdminDashboard() {
         onSave={editingItem ? handleUpdateWard : handleAddWard}
         ward={editingItem}
       />
+      <DeleteConfirmationModal
+  isOpen={deleteModal.isOpen}
+  onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+  onConfirm={deleteModal.onConfirm}
+  itemType={deleteModal.itemType}
+  itemName={deleteModal.itemName}
+/>
     </div>
   );
 }
@@ -1307,7 +1344,8 @@ function WardModal({ isOpen, onClose, onSave, ward }) {
   };
 
   return (
-    <Modal
+      
+     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={ward ? 'Edit Ward' : 'Add New Ward'}
@@ -1395,5 +1433,7 @@ function WardModal({ isOpen, onClose, onSave, ward }) {
         </div>
       </form>
     </Modal>
+
+
   );
 }

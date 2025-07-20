@@ -28,6 +28,11 @@ class ApiService {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || errorData.error || `HTTP error! status: ${response.status}`);
       }
+
+      // For DELETE requests or 204 No Content responses, return nothing
+    if (options.method === 'DELETE' || response.status === 204) {
+      return;
+    }
       
       const data = await response.json();
       return data;

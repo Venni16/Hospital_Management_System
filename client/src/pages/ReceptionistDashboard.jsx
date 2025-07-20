@@ -470,7 +470,6 @@ const generateAppointmentReport = () => {
     { id: 'billing', name: 'Billing', icon: DollarSign },
     { id: 'visitors', name: 'Visitors', icon: UserCheck },
     { id: 'insurance', name: 'Insurance', icon: Shield },
-    { id: 'phone', name: 'Phone Log', icon: Phone },
     { id: 'reports', name: 'Reports', icon: BarChart3 }
   ];
 
@@ -1147,62 +1146,7 @@ const generateAppointmentReport = () => {
         </div>
       )}
 
-      {/* Phone Log Tab */}
-      {activeTab === 'phone' && (
-        <div className="space-y-6 animate-fade-in">
-          <div className="sm:flex sm:items-center sm:justify-between">
-            <div className="sm:flex-auto">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Phone Call Log</h3>
-              <p className="mt-1 text-sm text-gray-500">Track incoming and outgoing calls</p>
-            </div>
-            <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-              <button className="btn-primary">
-                <Plus className="h-4 w-4 mr-2" />
-                Log Call
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-white shadow-soft overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
-              {phoneLog.map((call) => (
-                <li key={call.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <Phone className="h-6 w-6 text-blue-500" />
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{call.callerName}</div>
-                        <div className="text-sm text-gray-500">
-                          {call.phone} • {call.purpose}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {call.time} • {call.notes}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        call.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        call.status === 'transferred' ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {call.status}
-                      </span>
-                      {call.status === 'pending' && (
-                        <button className="btn-secondary text-xs">
-                          Call Back
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
+      
 {/* Reports Tab */}
 
 {activeTab === 'reports' && (
