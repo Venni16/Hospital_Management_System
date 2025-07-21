@@ -354,12 +354,12 @@ const generateAppointmentReport = () => {
       // Add clinic header
       doc.setFontSize(18);
       doc.setTextColor(40, 40, 140);
-      doc.text('HEALTHCARE CLINIC', 105, 20, { align: 'center' });
+      doc.text('HEALTH CARE HOSPITAL', 105, 20, { align: 'center' });
       
       // Add clinic information
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
-      doc.text('123 Medical Drive, Cityville', 105, 28, { align: 'center' });
+      doc.text('123 CHINATOWN, Cityville', 105, 28, { align: 'center' });
       doc.text('Phone: (555) 123-4567', 105, 35, { align: 'center' });
   
       // Add divider line
