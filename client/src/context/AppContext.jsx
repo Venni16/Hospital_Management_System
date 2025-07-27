@@ -8,6 +8,7 @@ const initialState = {
   currentUser: null,
   isAuthenticated: false,
   patients: [],
+  visitors: [],
   staff: [],
   wards: [],
   appointments: [],
@@ -49,9 +50,15 @@ function appReducer(state, action) {
     
     case 'SET_PATIENTS':
       return { ...state, patients: action.payload };
+
+    case 'SET_VISITORS':
+      return { ...state, visitors: action.payload };
     
     case 'ADD_PATIENT':
       return { ...state, patients: [...state.patients, action.payload] };
+
+    case 'ADD_VISITOR':
+      return { ...state, visitors: [...state.visitors, action.payload] };
     
     case 'UPDATE_PATIENT':
       return {
@@ -279,7 +286,8 @@ export function AppProvider({ children }) {
         await Promise.all([
           fetchPatients(),
           fetchAppointments(),
-          fetchBills()
+          fetchBills(),
+          fetchVisitors()
         ]);
       }
     } catch (error) {
@@ -292,6 +300,15 @@ export function AppProvider({ children }) {
     try {
       const response = await ApiService.getPatients(params);
       dispatch({ type: 'SET_PATIENTS', payload: response.results || response });
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+    }
+  };
+
+  const fetchVisitors = async (params = {}) => {
+    try {
+      const response = await ApiService.getVisitors(params);
+      dispatch({ type: 'SET_VISITORS', payload: response.results || response });
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message });
     }
@@ -406,6 +423,27 @@ export function AppProvider({ children }) {
       const newPatient = await ApiService.createPatient(patientData);
       dispatch({ type: 'ADD_PATIENT', payload: newPatient });
       return newPatient;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      throw error;
+    }
+  };
+
+  const addVisitor = async (visitorData) => {
+    try {
+      const newVisitor = await ApiService.createVisitor(visitorData);
+      dispatch({ type: 'ADD_VISITOR', payload: newVisitor });
+      return newVisitor;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      throw error;
+    }
+  };
+
+  const checkoutVisitor = async (visitorId) => {
+    try {
+      await ApiService.checkoutVisitor(visitorId);
+      await fetchVisitors();
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message });
       throw error;
@@ -654,6 +692,7 @@ export function AppProvider({ children }) {
     logout,
     // Fetch functions
     fetchPatients,
+    fetchVisitors,
     fetchWards,
     fetchAppointments,
     fetchMedicalRecords,
@@ -665,6 +704,8 @@ export function AppProvider({ children }) {
     fetchMedicationSchedule,
     // CRUD functions
     addPatient,
+    addVisitor,
+    checkoutVisitor,
     updatePatient,
     deletePatient,
     updateBedStatus,

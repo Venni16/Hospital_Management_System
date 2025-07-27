@@ -19,7 +19,8 @@ export default function ReceptionistDashboard() {
   const { 
     patients, appointments, bills, staff, currentUser, loading, error, clearError,
     fetchPatients, fetchAppointments, fetchBills, fetchStaff,
-    addPatient, updatePatient, addAppointment, addBill, addPayment, updateAppointment
+    addPatient, updatePatient, addAppointment, addBill, addPayment, updateAppointment,
+    visitors, fetchVisitors, addVisitor, checkoutVisitor
   } = useApp();
   
   const [activeTab, setActiveTab] = useState('overview');
@@ -37,12 +38,21 @@ export default function ReceptionistDashboard() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [dateFilter, setDateFilter] = useState('today');
 
-  // Mock data for additional receptionist features
-  const [visitors, setVisitors] = useState([
-    { id: 1, name: 'Robert Wilson', patientName: 'John Smith', relationship: 'Brother', checkInTime: '10:30', status: 'visiting', phone: '555-0123' },
-    { id: 2, name: 'Emma Davis', patientName: 'Sarah Johnson', relationship: 'Daughter', checkInTime: '14:15', status: 'waiting', phone: '555-0124' },
-    { id: 3, name: 'Michael Brown', patientName: 'John Smith', relationship: 'Friend', checkInTime: '16:00', status: 'checked-out', phone: '555-0125' }
-  ]);
+  React.useEffect(() => {
+    if (currentUser?.role === 'receptionist') {
+      fetchPatients();
+      fetchAppointments();
+      fetchBills();
+      fetchStaff();
+      fetchVisitors();
+    }
+  }, [currentUser]);
+
+  // Visitors data is now from context
+  // Remove local visitors state and fetchVisitors function
+
+  // Remove local visitors state and fetchVisitors function
+  // Remove local visitors state and fetchVisitors function
 
   const [insuranceClaims, setInsuranceClaims] = useState([
     { id: 1, patientName: 'John Smith', claimNumber: 'CLM-2024-001', amount: 1500, status: 'pending', submittedDate: '2024-01-15', insuranceProvider: 'Blue Cross' },
@@ -50,11 +60,7 @@ export default function ReceptionistDashboard() {
     { id: 3, patientName: 'Michael Brown', claimNumber: 'CLM-2024-003', amount: 850, status: 'rejected', submittedDate: '2024-01-13', insuranceProvider: 'Cigna' }
   ]);
 
-  const [phoneLog, setPhoneLog] = useState([
-    { id: 1, callerName: 'Jennifer Adams', phone: '555-0201', purpose: 'Appointment Inquiry', time: '09:15', status: 'completed', notes: 'Scheduled for next week' },
-    { id: 2, callerName: 'David Miller', phone: '555-0202', purpose: 'Test Results', time: '10:30', status: 'transferred', notes: 'Transferred to Dr. Davis' },
-    { id: 3, callerName: 'Lisa Garcia', phone: '555-0203', purpose: 'Billing Question', time: '11:45', status: 'pending', notes: 'Callback requested' }
-  ]);
+  
 
   // Fetch data on component mount
   useEffect(() => {
@@ -108,12 +114,44 @@ const todayRevenue = safeSum(
   const availableDoctors = staff.filter(member => member.role === 'doctor' && member.status === 'active');
 
   // Check-in data with more comprehensive tracking
-  const checkIns = [
-    { id: 1, patientId: 1, patientName: 'John Smith', time: '09:00', status: 'checked-in', appointmentId: 1, doctor: 'Dr. Emily Davis', type: 'consultation' },
-    { id: 2, patientId: 2, patientName: 'Sarah Johnson', time: '10:30', status: 'waiting', appointmentId: 2, doctor: 'Dr. Emily Davis', type: 'follow-up' },
-    { id: 3, patientId: 3, patientName: 'Michael Brown', time: '14:00', status: 'pending', appointmentId: null, doctor: 'Walk-in', type: 'emergency' },
-    { id: 4, patientId: 4, patientName: 'Lisa Wilson', time: '15:30', status: 'completed', appointmentId: 3, doctor: 'Dr. Emily Davis', type: 'routine' }
-  ];
+  const [checkIns, setCheckIns] = React.useState([]);
+
+  // Fetch check-in data from backend
+  const fetchCheckIns = async () => {
+    try {
+      // Fetch appointments with status 'scheduled', 'waiting', 'checked-in', 'completed'
+      const statuses = ['scheduled', 'waiting', 'checked-in', 'completed'];
+      let combined = [];
+
+      for (const status of statuses) {
+        const response = await fetch(`/api/appointments/?status=${status}`);
+        if (response.ok) {
+          const data = await response.json();
+          combined = combined.concat(data);
+        }
+      }
+
+      // Map to checkIns format
+      const mapped = combined.map(apt => ({
+        id: apt.id,
+        patientId: apt.patient,
+        patientName: apt.patient_name,
+        time: apt.time,
+        status: apt.status,
+        appointmentId: apt.id,
+        doctor: apt.doctor_name,
+        type: apt.type
+      }));
+
+      setCheckIns(mapped);
+    } catch (error) {
+      console.error('Error fetching check-in data:', error);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchCheckIns();
+  }, []);
 
   const handleAddPatient = async (patientData) => {
     try {
@@ -139,6 +177,7 @@ const todayRevenue = safeSum(
     try {
       await addAppointment(appointmentData);
       setShowAppointmentModal(false);
+      await fetchCheckIns();
     } catch (error) {
       console.error('Error adding appointment:', error);
     }
@@ -436,20 +475,50 @@ const generateAppointmentReport = () => {
 
 
 
-    // Handle patient check-in
-  const handleCheckIn = (checkInId) => {
-    console.log('Checking in patient:', checkInId);
+  // Handle patient check-in
+  const handleCheckIn = async (checkInId) => {
+    try {
+      const response = await fetch(`/api/appointments/${checkInId}/checkin/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        // Update local state
+        setCheckIns((prevCheckIns) =>
+          prevCheckIns.map((checkIn) =>
+            checkIn.id === checkInId ? { ...checkIn, status: 'checked-in' } : checkIn
+          )
+        );
+      } else {
+        console.error('Failed to check in patient');
+      }
+    } catch (error) {
+      console.error('Error during check-in:', error);
+    }
   };
 
-  const handleVisitorRegistration = (visitorData) => {
-    const newVisitor = {
-      id: visitors.length + 1,
-      ...visitorData,
-      checkInTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'visiting'
-    };
-    setVisitors([...visitors, newVisitor]);
-    setShowVisitorModal(false);
+  const handleVisitorRegistration = async (visitorData) => {
+    try {
+      const newVisitor = await addVisitor({
+        ...visitorData,
+        patient: visitorData.patient, // ensure patient id is sent
+        checkInTime: new Date().toISOString(),
+        status: 'visiting'
+      });
+      setShowVisitorModal(false);
+    } catch (error) {
+      console.error('Error registering visitor:', error);
+    }
+  };
+
+  const handleVisitorCheckOut = async (visitorId) => {
+    try {
+      await checkoutVisitor(visitorId);
+    } catch (error) {
+      console.error('Error during visitor check out:', error);
+    }
   };
 
   const handleInsuranceClaim = (claimData) => {
@@ -1082,7 +1151,10 @@ const generateAppointmentReport = () => {
                         {visitor.status}
                       </span>
                       {visitor.status === 'visiting' && (
-                        <button className="btn-secondary text-xs">
+                        <button
+                          className="btn-secondary text-xs"
+                          onClick={() => handleVisitorCheckOut(visitor.id)}
+                        >
                           Check Out
                         </button>
                       )}
@@ -2207,12 +2279,12 @@ function PaymentModal({ isOpen, onClose, onSave, bill }) {
   );
 }
 
-// Visitor Modal Component
+  // Visitor Modal Component
 function VisitorModal({ isOpen, onClose, onSave, patients }) {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    patientName: '',
+    patient: '',
     relationship: '',
     purpose: '',
     idType: '',
@@ -2225,7 +2297,7 @@ function VisitorModal({ isOpen, onClose, onSave, patients }) {
     setFormData({
       name: '',
       phone: '',
-      patientName: '',
+      patient: '',
       relationship: '',
       purpose: '',
       idType: '',
@@ -2274,15 +2346,15 @@ function VisitorModal({ isOpen, onClose, onSave, patients }) {
           <div>
             <label className="block text-sm font-medium text-gray-700">Patient to Visit *</label>
             <select
-              name="patientName"
+              name="patient"
               required
-              value={formData.patientName}
+              value={formData.patient}
               onChange={handleChange}
               className="form-input mt-1 block w-full"
             >
               <option value="">Select Patient</option>
               {patients.map(patient => (
-                <option key={patient.id} value={patient.name}>
+                <option key={patient.id} value={patient.id}>
                   {patient.name} - {patient.phone}
                 </option>
               ))}

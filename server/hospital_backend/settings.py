@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'inventory',
     'wards',
     'billing',
+    'visitors',
 ]
 
 MIDDLEWARE = [

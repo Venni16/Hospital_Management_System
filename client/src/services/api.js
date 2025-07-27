@@ -30,9 +30,9 @@ class ApiService {
       }
 
       // For DELETE requests or 204 No Content responses, return nothing
-    if (options.method === 'DELETE' || response.status === 204) {
-      return;
-    }
+      if (options.method === 'DELETE' || response.status === 204) {
+        return;
+      }
       
       const data = await response.json();
       return data;
@@ -106,28 +106,22 @@ class ApiService {
     });
   }
 
-  async getMyPatients() {
-    return this.request('/patients/my_patients/');
+  // Visitors
+  async getVisitors(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/visitors/${queryString ? `?${queryString}` : ''}`);
   }
 
-  async getAdmittedPatients() {
-    return this.request('/patients/admitted/');
-  }
-
-  async getOutpatients() {
-    return this.request('/patients/outpatients/');
-  }
-
-  async admitPatient(patientId, wardId, bedNumber) {
-    return this.request(`/patients/${patientId}/admit/`, {
+  async createVisitor(visitorData) {
+    return this.request('/visitors/', {
       method: 'POST',
-      body: JSON.stringify({ ward_id: wardId, bed_number: bedNumber }),
+      body: JSON.stringify(visitorData),
     });
   }
 
-  async dischargePatient(patientId) {
-    return this.request(`/patients/${patientId}/discharge/`, {
-      method: 'POST',
+  async checkoutVisitor(visitorId) {
+    return this.request(`/visitors/${visitorId}/checkout/`, {
+      method: 'PATCH',
     });
   }
 

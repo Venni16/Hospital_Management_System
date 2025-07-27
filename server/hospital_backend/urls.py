@@ -8,6 +8,8 @@ from appointments.views import AppointmentViewSet
 from medical_records.views import MedicalRecordViewSet, PrescriptionViewSet, LabTestViewSet
 from inventory.views import InventoryItemViewSet, InventoryTransactionViewSet
 from billing.views import BillViewSet, PaymentViewSet
+from visitors.views import VisitorViewSet
+
 
 # Create router and register viewsets
 router = DefaultRouter()
@@ -23,9 +25,13 @@ router.register(r'inventory', InventoryItemViewSet)
 router.register(r'inventory-transactions', InventoryTransactionViewSet)
 router.register(r'bills', BillViewSet)
 router.register(r'payments', PaymentViewSet)
+router.register(r'visitors', VisitorViewSet)
 
+
+# URL patterns
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls')),
 ]
+
