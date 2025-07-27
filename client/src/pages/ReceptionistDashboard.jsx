@@ -19,7 +19,7 @@ export default function ReceptionistDashboard() {
   const { 
     patients, appointments, bills, staff, currentUser, loading, error, clearError,
     fetchPatients, fetchAppointments, fetchBills, fetchStaff,
-    addPatient, updatePatient, addAppointment, addBill, addPayment
+    addPatient, updatePatient, addAppointment, addBill, addPayment, updateAppointment
   } = useApp();
   
   const [activeTab, setActiveTab] = useState('overview');
@@ -31,6 +31,7 @@ export default function ReceptionistDashboard() {
   const [showVisitorModal, setShowVisitorModal] = useState(false);
   const [showInsuranceModal, setShowInsuranceModal] = useState(false);
   const [editingPatient, setEditingPatient] = useState(null);
+  const [editingAppointment, setEditingAppointment] = useState(null);
   const [selectedBill, setSelectedBill] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -848,7 +849,13 @@ const generateAppointmentReport = () => {
                       }`}>
                         {appointment.status}
                       </span>
-                      <button className="text-blue-600 hover:text-blue-800">
+                      <button
+                        onClick={() => {
+                          setEditingAppointment(appointment);
+                          setShowAppointmentModal(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
                         <Edit3 className="h-4 w-4" />
                       </button>
                     </div>
@@ -1265,10 +1272,26 @@ const generateAppointmentReport = () => {
 
       <AppointmentModal
         isOpen={showAppointmentModal}
-        onClose={() => setShowAppointmentModal(false)}
-        onSave={handleAddAppointment}
+        onClose={() => {
+          setShowAppointmentModal(false);
+          setEditingAppointment(null);
+        }}
+        onSave={async (formData, appointment) => {
+          try {
+            if (appointment) {
+              await updateAppointment(appointment.id, formData);
+            } else {
+              await addAppointment(formData);
+            }
+            setShowAppointmentModal(false);
+            setEditingAppointment(null);
+          } catch (error) {
+            console.error('Error saving appointment:', error);
+          }
+        }}
         patients={patients}
         availableDoctors={availableDoctors}
+        appointment={editingAppointment}
       />
 
       <BillModal
@@ -1606,7 +1629,7 @@ function PatientModal({ isOpen, onClose, onSave, patient, availableDoctors }) {
 }
 
 // Enhanced Appointment Modal Component
-function AppointmentModal({ isOpen, onClose, onSave, patients, availableDoctors }) {
+function AppointmentModal({ isOpen, onClose, onSave, patients, availableDoctors, appointment }) {
   const [formData, setFormData] = useState({
     patient: '',
     doctor: '',
@@ -1618,9 +1641,35 @@ function AppointmentModal({ isOpen, onClose, onSave, patients, availableDoctors 
     duration: '30'
   });
 
+  React.useEffect(() => {
+    if (appointment) {
+      setFormData({
+        patient: appointment.patient || appointment.patient_id || '',
+        doctor: appointment.doctor || appointment.doctor_id || '',
+        date: appointment.date || '',
+        time: appointment.time || '',
+        type: appointment.type || '',
+        notes: appointment.notes || '',
+        priority: appointment.priority || 'routine',
+        duration: appointment.duration ? appointment.duration.toString() : '30'
+      });
+    } else {
+      setFormData({
+        patient: '',
+        doctor: '',
+        date: '',
+        time: '',
+        type: '',
+        notes: '',
+        priority: 'routine',
+        duration: '30'
+      });
+    }
+  }, [appointment]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    onSave(formData, appointment);
     setFormData({
       patient: '',
       doctor: '',
@@ -1644,7 +1693,7 @@ function AppointmentModal({ isOpen, onClose, onSave, patients, availableDoctors 
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Schedule New Appointment"
+      title={appointment ? "Edit Appointment" : "Schedule New Appointment"}
       size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -1771,7 +1820,7 @@ function AppointmentModal({ isOpen, onClose, onSave, patients, availableDoctors 
             Cancel
           </button>
           <button type="submit" className="btn-primary">
-            Schedule Appointment
+            {appointment ? "Update Appointment" : "Schedule Appointment"}
           </button>
         </div>
       </form>

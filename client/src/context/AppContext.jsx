@@ -507,6 +507,17 @@ export function AppProvider({ children }) {
     }
   };
 
+  const updateAppointment = async (id, appointmentData) => {
+    try {
+      const updatedAppointment = await ApiService.updateAppointment(id, appointmentData);
+      dispatch({ type: 'UPDATE_APPOINTMENT', payload: updatedAppointment });
+      return updatedAppointment;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      throw error;
+    }
+  };
+
   const addMedicalRecord = async (recordData) => {
     try {
       const newRecord = await ApiService.createMedicalRecord(recordData);
@@ -661,6 +672,7 @@ export function AppProvider({ children }) {
     updateWard,
     deleteWard,
     addAppointment,
+    updateAppointment,
     addMedicalRecord,
     addPrescription,
     addLabTest,
