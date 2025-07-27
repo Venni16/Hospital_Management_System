@@ -416,6 +416,7 @@ export function AppProvider({ children }) {
     try {
       const updatedPatient = await ApiService.updatePatient(id, patientData);
       dispatch({ type: 'UPDATE_PATIENT', payload: updatedPatient });
+      await fetchPatients();
       return updatedPatient;
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message });

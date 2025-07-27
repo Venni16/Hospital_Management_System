@@ -95,7 +95,7 @@ class ApiService {
 
   async updatePatient(id, patientData) {
     return this.request(`/patients/${id}/`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify(patientData),
     });
   }
