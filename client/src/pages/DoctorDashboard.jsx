@@ -123,7 +123,8 @@ export default function DoctorDashboard() {
 
   const handleAddPrescription = async (prescriptionData) => {
     try {
-      await addPrescription(prescriptionData);
+      const prescriptionDataWithDoctor = { ...prescriptionData, doctor: currentUser.id };
+      await addPrescription(prescriptionDataWithDoctor);
       setShowPrescriptionModal(false);
       setSelectedPatient(null);
     } catch (error) {
