@@ -101,11 +101,23 @@ export default function DoctorDashboard() {
 
   const handleAddMedicalRecord = async (recordData) => {
     try {
-      await addMedicalRecord(recordData);
+      const recordDataWithDoctor = { ...recordData, doctor: currentUser.id };
+      console.log('Adding medical record with data:', recordDataWithDoctor);
+      await addMedicalRecord(recordDataWithDoctor);
       setShowMedicalRecordModal(false);
       setSelectedPatient(null);
     } catch (error) {
       console.error('Error adding medical record:', error);
+      if (error.response) {
+        try {
+          const errorData = await error.response.json();
+          alert('Failed to add medical record: ' + JSON.stringify(errorData));
+        } catch (parseError) {
+          alert('Failed to add medical record: ' + (error.message || error));
+        }
+      } else {
+        alert('Failed to add medical record: ' + (error.message || error));
+      }
     }
   };
 
@@ -609,33 +621,45 @@ export default function DoctorDashboard() {
             </div>
           </div>
 
-          <div className="bg-white shadow-soft overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
+          <div className="overflow-hidden sm:rounded-md bg-transparent shadow-none border-none">
+            <ul className="divide-y divide-gray-200 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {myMedicalRecords.map((record) => (
-                <li key={record.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium text-gray-900">{record.patient_name}</div>
-                        <div className="text-sm text-gray-500">{record.date}</div>
-                      </div>
-                      <div className="mt-1">
-                        <p className="text-sm text-gray-600">
-                          <span className="font-medium">Diagnosis:</span> {record.diagnosis}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          <span className="font-medium">Symptoms:</span> {record.symptoms}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          <span className="font-medium">Treatment:</span> {record.treatment}
-                        </p>
-                        {record.follow_up && (
-                          <p className="text-sm text-blue-600">
-                            <span className="font-medium">Follow-up:</span> {record.follow_up}
-                          </p>
-                        )}
+                <li key={record.id} className="p-4 mb-3 bg-white rounded-lg shadow border border-gray-200 hover:shadow-md transition-shadow max-w-full">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">{record.patient_name}</h3>
+                    <time className="text-sm text-gray-500">{record.date}</time>
+                  </div>
+                  <div className="space-y-4 text-gray-700">
+                    <div className="flex items-start space-x-2 border-b border-gray-200 pb-2">
+                      <FileText className="w-5 h-5 text-blue-500 mt-1" />
+                      <div>
+                        <h4 className="text-md font-semibold text-gray-900">Diagnosis</h4>
+                        <p className="text-sm text-gray-700">{record.diagnosis}</p>
                       </div>
                     </div>
+                    <div className="flex items-start space-x-2 border-b border-gray-200 pb-2">
+                      <AlertCircle className="w-5 h-5 text-red-500 mt-1" />
+                      <div>
+                        <h4 className="text-md font-semibold text-gray-900">Symptoms</h4>
+                        <p className="text-sm text-gray-700">{record.symptoms}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-2 border-b border-gray-200 pb-2">
+                      <Heart className="w-5 h-5 text-pink-500 mt-1" />
+                      <div>
+                        <h4 className="text-md font-semibold text-gray-900">Treatment</h4>
+                        <p className="text-sm text-gray-700">{record.treatment}</p>
+                      </div>
+                    </div>
+                    {record.follow_up && (
+                      <div className="flex items-start space-x-2 text-blue-600">
+                        <CalendarIcon className="w-5 h-5 mt-1" />
+                        <div>
+                          <h4 className="text-md font-semibold">Follow-up</h4>
+                          <p className="text-sm">{record.follow_up}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}
@@ -859,7 +883,7 @@ function MedicalRecordModal({ isOpen, onClose, onSave, patients, selectedPatient
     symptoms: '',
     diagnosis: '',
     treatment: '',
-    medications: [],
+    medications: [{ name: '', dosage: '', frequency: '' }],
     notes: '',
     follow_up: ''
   });
@@ -878,17 +902,44 @@ function MedicalRecordModal({ isOpen, onClose, onSave, patients, selectedPatient
       symptoms: '',
       diagnosis: '',
       treatment: '',
-      medications: [],
+      medications: [{ name: '', dosage: '', frequency: '' }],
       notes: '',
       follow_up: ''
     });
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleMedicationChange = (index, field, value) => {
+    const newMedications = [...formData.medications];
+    newMedications[index][field] = value;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      medications: newMedications
     });
+  };
+
+  const addMedication = () => {
+    setFormData({
+      ...formData,
+      medications: [...formData.medications, { name: '', dosage: '', frequency: '' }]
+    });
+  };
+
+  const removeMedication = (index) => {
+    if (formData.medications.length > 1) {
+      const newMedications = formData.medications.filter((_, i) => i !== index);
+      setFormData({
+        ...formData,
+        medications: newMedications
+      });
+    }
   };
 
   return (
@@ -954,6 +1005,55 @@ function MedicalRecordModal({ isOpen, onClose, onSave, patients, selectedPatient
             className="form-input mt-1 block w-full"
             placeholder="Treatment plan and procedures..."
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Medications</label>
+          {formData.medications.map((medication, index) => (
+            <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3 p-3 border rounded-md">
+              <input
+                type="text"
+                placeholder="Name"
+                required
+                value={medication.name}
+                onChange={(e) => handleMedicationChange(index, 'name', e.target.value)}
+                className="form-input block w-full"
+              />
+              <input
+                type="text"
+                placeholder="Dosage"
+                required
+                value={medication.dosage}
+                onChange={(e) => handleMedicationChange(index, 'dosage', e.target.value)}
+                className="form-input block w-full"
+              />
+              <input
+                type="text"
+                placeholder="Frequency"
+                required
+                value={medication.frequency}
+                onChange={(e) => handleMedicationChange(index, 'frequency', e.target.value)}
+                className="form-input block w-full"
+              />
+              {formData.medications.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeMedication(index)}
+                  className="text-red-600 hover:text-red-800 col-span-3 text-right"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addMedication}
+            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add Medication
+          </button>
         </div>
 
         <div>
