@@ -181,6 +181,10 @@ class LabTestViewSet(viewsets.ModelViewSet):
     queryset = LabTest.objects.all()
     serializer_class = LabTestSerializer
     
+    def create(self, request, *args, **kwargs):
+        print(f"LabTestViewSet create called with data: {request.data}")
+        return super().create(request, *args, **kwargs)
+    
     def get_queryset(self):
         queryset = LabTest.objects.all()
         
@@ -211,6 +215,7 @@ class LabTestViewSet(viewsets.ModelViewSet):
         return queryset
     
     def perform_create(self, serializer):
+        print(f"LabTestViewSet perform_create called with data: {serializer.validated_data}")
         serializer.save(ordered_by=self.request.user)
     
     @action(detail=False, methods=['get'])

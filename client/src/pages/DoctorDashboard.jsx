@@ -11,6 +11,8 @@ import {
   MapPin, Calendar as CalendarIcon, Timer, Star, Award, TrendingUp
 } from 'lucide-react';
 
+import CompleteLabTestModal from '../components/CompleteLabTestModal';
+
 export default function DoctorDashboard() {
   const { 
     patients, appointments, medicalRecords, prescriptions, labTests, staff,
@@ -132,22 +134,38 @@ export default function DoctorDashboard() {
     }
   };
 
+  const [showCompleteLabTestModal, setShowCompleteLabTestModal] = useState(false);
+  const [selectedLabTest, setSelectedLabTest] = useState(null);
+  const [completingLabTest, setCompletingLabTest] = useState(false);
+  const [labTestCompletionError, setLabTestCompletionError] = useState(null);
+
   const handleAddLabTest = async (testData) => {
     try {
       await addLabTest(testData);
       setShowLabTestModal(false);
       setSelectedPatient(null);
+      await fetchLabTests();
+      // Removed window alert for success message
     } catch (error) {
       console.error('Error ordering lab test:', error);
+      // Removed window alert for error message
     }
   };
 
-  const handleCompleteLabTest = async (testId, results) => {
+  const handleCompleteLabTest = async (testId, results, notes) => {
+    setCompletingLabTest(true);
+    setLabTestCompletionError(null);
     try {
-      await api.completeLabTest(testId, results);
+      await api.completeLabTest(testId, results, notes);
       await fetchLabTests();
+      setShowCompleteLabTestModal(false);
+      setSelectedLabTest(null);
+      // Removed window alert for success message
     } catch (error) {
       console.error('Error completing lab test:', error);
+      setLabTestCompletionError(error.message || 'Failed to complete lab test.');
+    } finally {
+      setCompletingLabTest(false);
     }
   };
 
@@ -771,16 +789,21 @@ export default function DoctorDashboard() {
                         <p className="text-sm text-gray-600">
                           <span className="font-medium">Priority:</span> {test.priority}
                         </p>
-                        {test.results && (
-                          <p className="text-sm text-gray-600 mt-2">
-                            <span className="font-medium">Results:</span> {test.results}
-                          </p>
-                        )}
-                        {test.completed_date && (
-                          <p className="text-sm text-green-600">
-                            <span className="font-medium">Completed:</span> {test.completed_date}
-                          </p>
-                        )}
+                      {test.results && (
+                        <p className="text-sm text-gray-600 mt-2">
+                          <span className="font-medium">Results:</span> {test.results}
+                        </p>
+                      )}
+                      {test.notes && (
+                        <p className="text-sm text-gray-600 mt-1 italic">
+                          <span className="font-medium">Notes:</span> {test.notes}
+                        </p>
+                      )}
+                      {test.completed_date && (
+                        <p className="text-sm text-green-600">
+                          <span className="font-medium">Completed:</span> {test.completed_date}
+                        </p>
+                      )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -796,12 +819,11 @@ export default function DoctorDashboard() {
                       {test.status === 'pending' && (
                         <button
                           onClick={() => {
-                            const results = prompt('Enter test results:');
-                            if (results) {
-                              handleCompleteLabTest(test.id, results);
-                            }
+                            setSelectedLabTest(test);
+                            setShowCompleteLabTestModal(true);
                           }}
-                          className="text-green-600 hover:text-green-800"
+                          disabled={completingLabTest}
+                          className={`text-green-600 hover:text-green-800 ${completingLabTest ? 'opacity-50 cursor-not-allowed' : ''}`}
                           title="Complete test"
                         >
                           <CheckCircle className="h-4 w-4" />
@@ -849,6 +871,21 @@ export default function DoctorDashboard() {
         patients={myPatients}
         selectedPatient={selectedPatient}
       />
+
+      {showCompleteLabTestModal && selectedLabTest && (
+        <CompleteLabTestModal
+          isOpen={showCompleteLabTestModal}
+          onClose={() => {
+            setShowCompleteLabTestModal(false);
+            setSelectedLabTest(null);
+            setLabTestCompletionError(null);
+          }}
+          labTest={selectedLabTest}
+          onComplete={handleCompleteLabTest}
+          loading={completingLabTest}
+          error={labTestCompletionError}
+        />
+      )}
 
       <PatientDetailModal
         isOpen={showPatientDetailModal}

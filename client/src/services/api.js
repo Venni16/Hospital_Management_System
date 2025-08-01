@@ -15,27 +15,54 @@ class ApiService {
       ...options,
     };
 
+    console.log('Making API request to:', url);
+    console.log('Request config:', config);
+
     try {
       const response = await fetch(url, config);
       
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Token expired or invalid - logout user
-          this.logout();
-          throw new Error('Session expired. Please login again.');
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+              if (!response.ok) {
+          if (response.status === 401) {
+            // Token expired or invalid - logout user
+            this.logout();
+            throw new Error('Session expired. Please login again.');
+          }
+          
+          const errorData = await response.json().catch(() => ({}));
+          console.log('Error response data:', errorData);
+          
+          // Handle Django REST Framework validation errors
+          if (errorData && typeof errorData === 'object') {
+            if (errorData.detail) {
+              throw new Error(errorData.detail);
+            } else if (errorData.error) {
+              throw new Error(errorData.error);
+            } else {
+              // Format field-specific errors
+              const fieldErrors = Object.entries(errorData)
+                .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+                .join('; ');
+              
+              if (fieldErrors) {
+                throw new Error(`Validation errors: ${fieldErrors}`);
+              }
+            }
+          }
+          
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+              // For DELETE requests or 204 No Content responses, return nothing
+        if (options.method === 'DELETE' || response.status === 204) {
+          return;
         }
         
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      // For DELETE requests or 204 No Content responses, return nothing
-      if (options.method === 'DELETE' || response.status === 204) {
-        return;
-      }
-      
-      const data = await response.json();
-      return data;
+        const data = await response.json();
+        console.log('Response data:', data);
+        return data;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;
@@ -254,6 +281,7 @@ class ApiService {
   }
 
   async createLabTest(testData) {
+    console.log('API createLabTest called with:', testData);
     return this.request('/lab-tests/', {
       method: 'POST',
       body: JSON.stringify(testData),
@@ -264,10 +292,23 @@ class ApiService {
     return this.request('/lab-tests/pending/');
   }
 
-  async completeLabTest(id, results) {
+  async completeLabTest(id, results, notes = '') {
     return this.request(`/lab-tests/${id}/complete/`, {
       method: 'PATCH',
-      body: JSON.stringify({ results }),
+      body: JSON.stringify({ results, notes }),
+    });
+  }
+
+  async startLabTestProcessing(id) {
+    return this.request(`/lab-tests/${id}/start_processing/`, {
+      method: 'PATCH',
+    });
+  }
+
+  async cancelLabTest(id, reason) {
+    return this.request(`/lab-tests/${id}/cancel/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reason }),
     });
   }
 

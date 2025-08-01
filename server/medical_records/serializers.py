@@ -74,7 +74,7 @@ class LabTestSerializer(serializers.ModelSerializer):
     class Meta:
         model = LabTest
         fields = '__all__'
-        read_only_fields = ['ordered_date', 'created_at', 'updated_at']
+        read_only_fields = ['ordered_by', 'ordered_date', 'created_at', 'updated_at']
     
     def get_days_pending(self, obj):
         if obj.status in ['completed', 'cancelled']:
@@ -84,6 +84,43 @@ class LabTestSerializer(serializers.ModelSerializer):
         return (timezone.now().date() - obj.ordered_date).days
     
     def validate_priority(self, value):
+        print(f"Validating priority with value: {value}, type: {type(value)}")
         if value not in ['routine', 'urgent', 'stat']:
             raise serializers.ValidationError("Invalid priority level")
         return value
+    
+    def validate_test_type(self, value):
+        """Validate test type length"""
+        print(f"Validating test_type with value: {value}, type: {type(value)}")
+        if len(value) > 100:
+            raise serializers.ValidationError("Test type cannot be longer than 100 characters")
+        return value
+    
+    def validate_sample_type(self, value):
+        """Validate sample type length"""
+        print(f"Validating sample_type with value: {value}, type: {type(value)}")
+        if value and len(value) > 50:
+            raise serializers.ValidationError("Sample type cannot be longer than 50 characters")
+        return value
+    
+    def validate_patient(self, value):
+        """Validate that the patient exists (value is already a Patient instance)"""
+        print(f"Validating patient with value: {value}, type: {type(value)}")
+        if not value:
+            raise serializers.ValidationError("Patient is required")
+        return value
+    
+    def validate(self, data):
+        """Custom validation for the entire object"""
+        print(f"LabTestSerializer validate called with data: {data}")
+        
+        # Check if fasting_required is properly converted to boolean
+        if 'fasting_required' in data:
+            print(f"fasting_required type: {type(data['fasting_required'])}, value: {data['fasting_required']}")
+        
+        # Check other fields
+        for field in ['notes', 'reference_values']:
+            if field in data:
+                print(f"{field} type: {type(data[field])}, value: {data[field]}")
+        
+        return data
