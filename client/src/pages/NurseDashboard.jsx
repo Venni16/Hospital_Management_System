@@ -8,13 +8,17 @@ import {
   Users, Activity, Package, Bed, Plus, Edit3, Eye, Clock, CheckCircle, 
   AlertTriangle, Heart, Thermometer, Droplets, Pill, Stethoscope,
   Calendar, User, Building, Syringe, ClipboardList, TrendingUp,
-  Shield, Bell, FileText, Monitor, Zap, UserCheck, Settings
+  Shield, Bell, FileText, Monitor, Zap, UserCheck, Settings, Trash
 } from 'lucide-react';
+
+import InventoryModal from '../components/InventoryModal';
+
 
 export default function NurseDashboard() {
   const { 
     patients, wards, inventory, currentUser, loading, error, clearError,
     fetchPatients, fetchWards, fetchInventory, updateBedStatus, updateInventoryItem,
+    addInventoryItem,
     medicationSchedule, fetchMedicationSchedule, dispatch
   } = useApp();
   
@@ -223,6 +227,61 @@ export default function NurseDashboard() {
     { id: 'inventory', name: 'Inventory', icon: Package },
     { id: 'notes', name: 'Nursing Notes', icon: FileText }
   ];
+
+  const [loadingInventory, setLoadingInventory] = React.useState(false);
+  const [errorInventory, setErrorInventory] = React.useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState(null);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = React.useState(false);
+  const [itemToDelete, setItemToDelete] = React.useState(null);
+
+  const handleSaveInventoryItem = async (itemData) => {
+    setLoadingInventory(true);
+    setErrorInventory(null);
+    try {
+      if (selectedInventoryItem) {
+        // Update existing item
+        await updateInventoryItem(selectedInventoryItem.id, itemData);
+      } else {
+        // Add new item
+        await addInventoryItem(itemData);
+      }
+      await fetchInventory();
+      setShowInventoryModal(false);
+      setSelectedInventoryItem(null);
+    } catch (error) {
+      setErrorInventory(error.message || 'Failed to save inventory item');
+    } finally {
+      setLoadingInventory(false);
+    }
+  };
+
+  const { api } = useApp();
+
+  const handleDeleteInventoryItem = async (id) => {
+    setLoadingInventory(true);
+    setErrorInventory(null);
+    try {
+      await api.deleteInventoryItem(id);
+      dispatch({ type: 'SET_INVENTORY', payload: inventory.filter(item => item.id !== id) });
+      await fetchInventory();
+      setItemToDelete(null);
+      setShowDeleteConfirmModal(false);
+    } catch (error) {
+      setErrorInventory(error.message || 'Failed to delete inventory item');
+    } finally {
+      setLoadingInventory(false);
+    }
+  };
+
+  const openDeleteConfirmModal = (item) => {
+    setItemToDelete(item);
+    setShowDeleteConfirmModal(true);
+  };
+
+  const closeDeleteConfirmModal = () => {
+    setItemToDelete(null);
+    setShowDeleteConfirmModal(false);
+  };
 
   if (loading) {
     return <LoadingSpinner text="Loading dashboard..." />;
@@ -813,79 +872,152 @@ export default function NurseDashboard() {
 
       {/* Inventory Tab */}
       {activeTab === 'inventory' && (
-        <div className="space-y-6 animate-fade-in">
-          <div className="sm:flex sm:items-center sm:justify-between">
-            <div className="sm:flex-auto">
-              <SearchBar
-                value={searchTerm}
-                onChange={setSearchTerm}
-                placeholder="Search inventory items..."
-              />
+        <>
+          <div className="space-y-6 animate-fade-in">
+            <div className="sm:flex sm:items-center sm:justify-between">
+              <div className="sm:flex-auto">
+                <SearchBar
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  placeholder="Search inventory items..."
+                />
+              </div>
+              <div className="mt-4 sm:mt-0 sm:ml-4 sm:flex-none">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedInventoryItem(null);
+                  setShowInventoryModal(true);
+                }}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Add Inventory Item
+              </button>
+              </div>
             </div>
-          </div>
 
-          {/* Low Stock Alert */}
-          {lowStockItems.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
-              <div className="flex">
-                <AlertTriangle className="h-5 w-5 text-red-400" />
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">
-                    Low Stock Alert
-                  </h3>
-                  <div className="mt-2 text-sm text-red-700">
-                    <p>{lowStockItems.length} items are running low on stock.</p>
+            {/* Low Stock Alert */}
+            {lowStockItems.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                <div className="flex">
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">
+                      Low Stock Alert
+                    </h3>
+                    <div className="mt-2 text-sm text-red-700">
+                      <p>{lowStockItems.length} items are running low on stock.</p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="bg-white shadow-soft overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
-              {inventory.filter(item => 
-                item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.category?.toLowerCase().includes(searchTerm.toLowerCase())
-              ).map((item) => (
-                <li key={item.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                        <div className="text-sm text-gray-500">{item.location}</div>
-                      </div>
-                      <div className="mt-1">
-                        <p className="text-sm text-gray-600">
-                          Category: {item.category} • Unit: {item.unit}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Supplier: {item.supplier} • Expires: {new Date(item.expiry_date).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-gray-900">
-                          {item.quantity} {item.unit}
+            <div className="bg-white shadow-soft overflow-hidden sm:rounded-md">
+              <ul className="divide-y divide-gray-200">
+                {inventory.filter(item =>
+                  item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  item.category?.toLowerCase().includes(searchTerm.toLowerCase())
+                ).map((item) => (
+                  <li key={item.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                          <div className="text-sm text-gray-500">{item.location}</div>
                         </div>
-                        <div className={`text-xs ${
-                          item.quantity <= item.min_stock ? 'text-red-600' : 'text-gray-500'
+                        <div className="mt-1">
+                          <p className="text-sm text-gray-600">
+                            Category: {item.category} • Unit: {item.unit}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Supplier: {item.supplier} • Expires: {new Date(item.expiry_date).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-gray-900">
+                            {item.quantity} {item.unit}
+                          </div>
+                          <div className={`text-xs ${
+                            item.quantity <= item.min_stock ? 'text-red-600' : 'text-gray-500'
+                          }`}>
+                            Min: {item.min_stock}
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          item.quantity <= item.min_stock ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                         }`}>
-                          Min: {item.min_stock}
-                        </div>
+                          {item.quantity <= item.min_stock ? 'Low Stock' : 'In Stock'}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setSelectedInventoryItem(item);
+                            setShowInventoryModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Edit Inventory Item"
+                        >
+                          <Edit3 className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => openDeleteConfirmModal(item)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Delete Inventory Item"
+                        >
+                          <Trash className="h-5 w-5" />
+                        </button>
                       </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        item.quantity <= item.min_stock ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                      }`}>
-                        {item.quantity <= item.min_stock ? 'Low Stock' : 'In Stock'}
-                      </span>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
+
+      {showInventoryModal && (
+        <InventoryModal
+          isOpen={showInventoryModal}
+          onClose={() => setShowInventoryModal(false)}
+          onSave={handleSaveInventoryItem}
+          initialData={selectedInventoryItem}
+        />
+      )}
+
+      {showDeleteConfirmModal && itemToDelete && (
+        <Modal
+          isOpen={showDeleteConfirmModal}
+          onClose={closeDeleteConfirmModal}
+          title="Confirm Delete"
+          size="sm"
+        >
+      <div className="space-y-4">
+        <p>Are you sure you want to delete the inventory item <strong>{itemToDelete.name}</strong>?</p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={closeDeleteConfirmModal}
+            className="btn-secondary"
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              handleDeleteInventoryItem(itemToDelete.id);
+            }}
+            className="btn-danger"
+            type="button"
+          >
+            Delete
+          </button>
         </div>
+      </div>
+        </Modal>
+      )}
+        </>
       )}
 
       {/* Nursing Notes Tab */}

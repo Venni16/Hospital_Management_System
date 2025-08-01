@@ -332,6 +332,12 @@ class ApiService {
     });
   }
 
+  async deleteInventoryItem(id) {
+    return this.request(`/inventory/${id}/`, {
+      method: 'DELETE',
+    });
+  }
+
   async getLowStockItems() {
     return this.request('/inventory/low_stock/');
   }
