@@ -46,7 +46,7 @@ export default function Login() {
           backgroundImage: `url('/src/assets/HMS_BACK.png')`,
         }}
       >
-        <div className="absolute inset-0 bg-black/40"></div>
+        
       </div>
       
       <div className="max-w-md w-full relative z-10">
@@ -127,7 +127,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowForgotPassword(true)}
-                className="text-sm text-blue-300 hover:text-blue-200 font-medium"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
                 Forgot password?
               </button>
@@ -136,7 +136,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-500/80 backdrop-blur-sm text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600/80 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full bg-blue-600 backdrop-blur-sm text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (
                 <span className="flex items-center justify-center">
