@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { LogOut, Italic as Hospital, User } from 'lucide-react';
+import { HeartPulse } from 'lucide-react';
 
 export default function Layout({ children }) {
   const { currentUser, logout } = useApp();
@@ -28,7 +29,7 @@ export default function Layout({ children }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Hospital className="h-8 w-8 text-blue-600 mr-3" />
+            <HeartPulse className="h-8 w-8 text-blue-600" />
               <h1 className="text-xl font-semibold text-gray-900">Hospital Management System</h1>
             </div>
             

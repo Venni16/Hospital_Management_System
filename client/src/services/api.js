@@ -413,6 +413,36 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // Password Reset Functions
+  async forgotPassword(email) {
+    try {
+      const response = await this.request('/users/forgot_password/', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(error.message || 'Failed to send reset instructions');
+    }
+  }
+
+  async resetPasswordConfirm({ token, uidb64, new_password, confirm_password }) {
+    try {
+      const response = await this.request('/users/reset_password_confirm/', {
+        method: 'POST',
+        body: JSON.stringify({
+          token,
+          uidb64,
+          new_password,
+          confirm_password,
+        }),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(error.message || 'Failed to reset password');
+    }
+  }
 }
 
 export default new ApiService();

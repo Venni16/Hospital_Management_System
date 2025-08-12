@@ -4,8 +4,17 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.encoding import force_str, force_bytes
 from django.db.models import Q
-from .serializers import UserSerializer, LoginSerializer
+from django.conf import settings
+from .serializers import (
+    UserSerializer, 
+    LoginSerializer, 
+    PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer
+)
 
 User = get_user_model()
 
@@ -14,7 +23,7 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     
     def get_permissions(self):
-        if self.action in ['login', 'create']:
+        if self.action in ['login', 'create', 'forgot_password', 'reset_password_confirm']:
             permission_classes = [AllowAny]
         else:
             permission_classes = [IsAuthenticated]
@@ -150,3 +159,118 @@ class UserViewSet(viewsets.ModelViewSet):
         user.save()
         
         return Response({'message': 'Password reset successfully'})
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def forgot_password(self, request):
+        """Request password reset"""
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return Response({'error': 'User with this email does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Generate reset token
+            token = default_token_generator.make_token(user)
+            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+            
+            # Build reset URL
+            reset_url = f"http://localhost:5173/reset-password/{uidb64}/{token}/"
+            
+            # Send email
+            subject = "Password Reset - Hospital Management System"
+            message = f"""
+            Hello {user.first_name or user.username},
+            
+            You have requested a password reset for your account.
+            
+            Please click the following link to reset your password:
+            {reset_url}
+            
+            If you did not request this password reset, please ignore this email.
+            
+            This link will expire in 24 hours.
+            
+            Best regards,
+            Hospital Management System
+            """
+            
+            import logging
+            import requests
+            from django.conf import settings
+            logger = logging.getLogger(__name__)
+            try:
+                response = requests.post(
+                    'https://api.resend.com/emails',
+                    headers={
+                        'Authorization': f'Bearer {settings.RESEND_API_KEY}',
+                        'Content-Type': 'application/json',
+                    },
+                    json={
+                        'from': settings.DEFAULT_FROM_EMAIL,
+                        'to': [email],
+                        'subject': subject,
+                        'text': message,
+                    }
+                )
+                if response.status_code == 200 or response.status_code == 202:
+                    return Response({
+                        'message': 'Password reset instructions have been sent to your email'
+                    })
+                else:
+                    logger.error(f"Resend API error: {response.status_code} - {response.text}")
+                    return Response(
+                        {'error': 'Failed to send email via Resend API.'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            except Exception as e:
+                logger.error(f"Exception sending email via Resend API: {str(e)}")
+                return Response(
+                    {'error': 'Failed to send email. Please try again later.'}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+                
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def reset_password_confirm(self, request):
+        """Confirm password reset"""
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                uid = force_str(urlsafe_base64_decode(serializer.validated_data['uidb64']))
+                user = User.objects.get(pk=uid)
+                
+                if default_token_generator.check_token(user, serializer.validated_data['token']):
+                    user.set_password(serializer.validated_data['new_password'])
+                    user.save()
+                    return Response({'message': 'Password has been reset successfully'})
+                else:
+                    return Response({'error': 'Invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
+                    
+            except (User.DoesNotExist, ValueError, TypeError):
+                return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
+                
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def reset_password_confirm(self, request):
+        """Confirm password reset"""
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                uid = force_str(urlsafe_base64_decode(serializer.validated_data['uidb64']))
+                user = User.objects.get(pk=uid)
+                
+                if default_token_generator.check_token(user, serializer.validated_data['token']):
+                    user.set_password(serializer.validated_data['new_password'])
+                    user.save()
+                    return Response({'message': 'Password has been reset successfully'})
+                else:
+                    return Response({'error': 'Invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
+                    
+            except (User.DoesNotExist, ValueError, TypeError):
+                return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
+                
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

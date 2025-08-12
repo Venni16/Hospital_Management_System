@@ -158,6 +158,11 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 
+# Resend configuration for password reset
+EMAIL_BACKEND = 'django_resend.ResendBackend'
+RESEND_API_KEY = 're_LsJHB6UU_5YvEDzgyW54eTDrxue75iqUd'  # Replace with your actual Resend API key
+DEFAULT_FROM_EMAIL = 'onboarding@resend.dev'  # Update this to your verified domain email
+
 # Logging configuration
 LOGGING = {
     'version': 1,

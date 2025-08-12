@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import Login from './components/Login';
 import Layout from './components/Layout';
@@ -6,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import DoctorDashboard from './pages/DoctorDashboard';
 import NurseDashboard from './pages/NurseDashboard';
 import ReceptionistDashboard from './pages/ReceptionistDashboard';
+import ResetPassword from './pages/ResetPassword';
 
 function AppContent() {
   const { isAuthenticated, currentUser } = useApp();
@@ -39,7 +41,12 @@ function AppContent() {
 function App() {
   return (
     <AppProvider>
-      <AppContent />
+      <Router>
+        <Routes>
+          <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
+          <Route path="/*" element={<AppContent />} />
+        </Routes>
+      </Router>
     </AppProvider>
   );
 }

@@ -245,6 +245,37 @@ export function AppProvider({ children }) {
     }
   };
 
+  const forgotPassword = async (email) => {
+    console.log('forgotPassword function called with email:', email);
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      dispatch({ type: 'CLEAR_ERROR' });
+
+      const response = await ApiService.forgotPassword(email);
+      return response;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
+  const resetPasswordConfirm = async (token, uid, newPassword) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      dispatch({ type: 'CLEAR_ERROR' });
+
+      const response = await ApiService.resetPasswordConfirm(token, uid, newPassword);
+      return response;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      throw error;
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
   const logout = async () => {
     try {
       await ApiService.logout();
@@ -689,6 +720,8 @@ export function AppProvider({ children }) {
     ...state,
     // Auth functions
     login,
+    forgotPassword,
+    resetPasswordConfirm,
     logout,
     // Fetch functions
     fetchPatients,
