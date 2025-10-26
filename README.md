@@ -153,6 +153,6 @@ The backend is configured to allow requests from:
 2. Serve static files
 3. Configure API base URL for production
 
-## 📝 License
+## Author
 
-This project is licensed under the MIT License.
+Vennilavan Manoharen – for academic submission.
